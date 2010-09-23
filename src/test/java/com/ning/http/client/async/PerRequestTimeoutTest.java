@@ -150,6 +150,8 @@ public class PerRequestTimeoutTest extends AbstractBasicTest {
 
     @Test(groups = "standalone")
     public void testGlobalIdleTimeout() throws IOException {
+        final long times[] = new long[] {-1, -1};
+
         AsyncHttpClient client = new AsyncHttpClient(new AsyncHttpClientConfig.Builder().setIdleConnectionTimeoutInMs(2000).build());
         Future<Response> responseFuture = client.prepareGet(getTargetUrl()).execute(new AsyncCompletionHandler<Response>() {
             @Override
@@ -159,8 +161,14 @@ public class PerRequestTimeoutTest extends AbstractBasicTest {
 
             @Override
             public STATE onBodyPartReceived(HttpResponseBodyPart content) throws Exception {
-                log.info(String.format("@%d received body part.", System.currentTimeMillis()));
+                times[0] = System.currentTimeMillis();
                 return super.onBodyPartReceived(content);
+            }
+
+            @Override
+            public void onThrowable(Throwable t) {
+                times[1] = System.currentTimeMillis();
+                super.onThrowable(t);
             }
         });
         try {
@@ -170,6 +178,8 @@ public class PerRequestTimeoutTest extends AbstractBasicTest {
         } catch (InterruptedException e) {
             fail("Interrupted.", e);
         } catch (ExecutionException e) {
+            log.info(String.format("\n@%dms Last body part received\n@%dms Connection killed\n %dms difference.",
+                    times[0], times[1], (times[1] - times[0])));
             fail("Timeouted on idle.", e);
         }
     }
