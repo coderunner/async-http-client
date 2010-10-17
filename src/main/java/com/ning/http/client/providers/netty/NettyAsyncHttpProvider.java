@@ -1071,9 +1071,11 @@ public class NettyAsyncHttpProvider extends IdleStateHandler implements AsyncHtt
             future.done(new Callable<Boolean>() {
                 public Boolean call() throws Exception {
                     if (future.getKeepAlive() && cache) {
-                        boolean added = connectionsPool.addConnection(AsyncHttpProviderUtils.getBaseUrl(future.getURI()), ctx.getChannel());
-                        if (!added) closeChannel(ctx);
-                        return added;
+                        if (!connectionsPool.addConnection(AsyncHttpProviderUtils.getBaseUrl(future.getURI()), ctx.getChannel())) {
+                        	//if not added to the connection pool, no need to keep it open
+                        	//we will never reuse it.
+                        	closeChannel(ctx);
+                        }
                     }
                     return false;
                 }
